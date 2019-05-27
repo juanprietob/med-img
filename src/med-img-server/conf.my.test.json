@@ -1,0 +1,42 @@
+{
+	"host": "localhost",
+	"port": 8180,
+	"plugins": {
+		"@hapi/vision": {},
+		"@hapi/inert": {},
+		"@hapi/h2o2": {},
+		"lout": {},
+		"@tanepiper/hapi-auth-jwt": {},
+		"hapi-jwt-couch": {
+			"privateKey": "hQvWtXjwhyKiTNt6Eg4qVlPQvlI1jgtdeLvXrDZcPkYXwLRBUHvgToNNVBwC/ZW6jKCdiBXSKG1DjKgl4IQaxKZmS65bRRMa7z1y4STf49LmdYMoHk/0zrVFv9K/Oy6eVWsA5w==",
+			"saltRounds": 10,
+			"algorithm": { 
+				"algorithm": "HS256",
+				"expiresIn": "7d"
+			},
+			"verifyOptions": { 
+				"algorithms": [ "HS256" ] 
+			},
+			"mailer": {
+				"nodemailer": "nodemailer-stub-transport",
+				"from": "Juan Carlos Prieto <jprieto@med.unc.edu>",
+				"message": "Hello @USERNAME@,<br>Somebody asked me to send you a link to reset your password, hopefully it was you.<br>Follow this <a href='@SERVER@/public/#/login/reset?token=@TOKEN@'>link</a> to reset your password.<br>The link will expire in 30 minutes.<br>Bye."
+			},
+			"userdb" : {
+				"hostname": "http://localhost:5984",
+				"database": "clusterjobstest"
+			}
+		},
+		"couch-provider": {
+			"default" : "medimgdb",
+			"medimgdb" : {
+				"hostname": "http://localhost:5984",
+				"database": "medimgdbtest"
+			},
+			"namespace": ["couchprovider"]
+		},
+		"hapi-dicom-couch": {
+			
+		}
+	}
+}

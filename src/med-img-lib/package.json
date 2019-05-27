@@ -1,0 +1,18 @@
+{
+  "name": "med-img-lib",
+  "version": "1.0.0",
+  "description": "Interact with med-img server API in the command line. Create projects and import medical images.",
+  "main": "index.js",
+  "scripts": {
+    "test": "lab -v test.js"
+  },
+  "keywords": [
+    "medical",
+    "images",
+    "dicom",
+    "import",
+    "med-img"
+  ],
+  "author": "juanprietob@gmail.com",
+  "license": "MIT"
+}

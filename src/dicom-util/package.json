@@ -1,0 +1,22 @@
+{
+  "name": "dicom-util",
+  "version": "1.0.0",
+  "description": "Import dicom datasets to a couchdb instance",
+  "main": "index.js",
+  "scripts": {
+    "test": "lab -v test.js"
+  },
+  "keywords": [
+    "DICOM",
+    "couchdb",
+    "query",
+    "retrieve"
+  ],
+  "author": "juanprietob@gmail.com",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^3.5.4",
+    "dicom": "^0.4.4",
+    "underscore": "^1.9.1"
+  }
+}
