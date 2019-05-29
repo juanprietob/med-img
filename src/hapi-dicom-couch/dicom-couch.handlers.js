@@ -1,13 +1,16 @@
-var request = require('request');
-var _ = require('underscore');
-var Promise = require('bluebird');
-var Boom = require('@hapi/boom');
-var spawn = require('child_process').spawn;
-var couchUpdateViews = require('couch-update-views');
-var path = require('path');
-var qs = require('querystring');
-var os = require('os');
-const { PassThrough, Writable } = require('stream');
+const request = require('request');
+const _ = require('underscore');
+const Promise = require('bluebird');
+const Boom = require('@hapi/boom');
+const spawn = require('child_process').spawn;
+const couchUpdateViews = require('couch-update-views');
+const path = require('path');
+const qs = require('querystring');
+const os = require('os');
+const medimglib = require('med-img-lib');
+const { Readable } = require('stream');
+const concat = require('concat-stream');
+const fs = require('fs');
 
 module.exports = function (server, conf) {
 	
@@ -19,59 +22,304 @@ module.exports = function (server, conf) {
 	couchUpdateViews.migrateUp(server.methods.couchprovider.getCouchDBServer(), path.join(__dirname, 'views'), true);
 
 	var handler = {};
-	/*
-	*/
-	handler.createJob = function(req, rep){
-		
-		var job = req.payload;
-		job.timestamp = new Date();
-		job.jobstatus = {
-			status: 'CREATE'
-		};		
 
-		server.methods.couchprovider.uploadDocuments(job)
-		.then(function(res){
-			if(res.length === 1){
-				return res[0];
+	const validateImageCollaborator = function(dcmdoc, credentials){
+		if(dcmdoc["0020000D"] && dcmdoc["0020000D"].Value && dcmdoc["0020000D"].Value[0]){
+			var query = {
+				key: [dcmdoc["0020000D"].Value[0], credentials.email]
+			}
+			var view = "_design/med-img-projects/_view/studycollaborators"
+			return server.methods.couchprovider.getViewQs(view, query)
+			.then(function(){
+				return dcmdoc;
+			})
+		}
+		return Promise.reject("You are not allowed to access this image");
+	}
+
+	const validateImageOwnership = function(dcmdoc, credentials){
+		if(dcmdoc["0020000D"] && dcmdoc["0020000D"].Value && dcmdoc["0020000D"].Value[0]){
+			var query = {
+				key: [dcmdoc["0020000D"].Value[0], credentials.email]
+			}
+			var view = "_design/med-img-projects/_view/studyowner"
+			return server.methods.couchprovider.getViewQs(view, query)
+			.then(function(){
+				return dcmdoc;
+			})
+		}
+		return Promise.reject("You are not allowed to access this image");
+	}
+
+	
+	const getDicomBuffer = function(dicomstream){
+
+		return new Promise(function(resolve, reject){
+			var gotDicom = function(dicombuffer){
+				resolve(dicombuffer);
+			}
+
+			var concatStream = concat(gotDicom);
+			dicomstream.on('error', reject);
+			dicomstream.pipe(concatStream);
+
+		});
+	}
+
+	const getBufferStream = function(buffer){
+		const stream = new Readable();
+		stream.push(buffer);
+		stream.push(null);
+		return Promise.resolve(stream);
+	}
+
+	const dicomImport = function(filename, stream){
+
+		return getDicomBuffer(stream)
+		.then(function(dicombuffer){
+			return Promise.all([getBufferStream(dicombuffer), getBufferStream(dicombuffer)])
+		})
+		.spread(function(dicomstream1, dicomstream2){
+			return medimglib.dumpDicomStream(dicomstream1)
+			.then(function(dicomjson){
+				dicomjson.type = "image";
+				dicomjson._id = medimglib.getDicomValue(dicomjson, "SOPInstanceUID");
+				return dicomjson;
+			})
+			.then(function(dcmobj){
+				return server.methods.couchprovider.uploadDocuments(dcmobj)
+				.then(function(res){
+					return server.methods.couchprovider.getDocument(dcmobj._id);
+				})
+				.catch(function(e){
+					console.error(e);
+					return server.methods.couchprovider.getDocument(dcmobj._id);
+				});
+			})
+			.then(function(dcmobj){
+				return server.methods.couchprovider.addDocumentAttachment(dcmobj, filename, dicomstream2);
+			});
+		});
+	}
+
+	const createSoftLink = function(doc, projectname, filename){
+		var filepath = server.methods.couchprovider.getDocumentStreamAttachmentUri(doc, filename)
+		.then(function(uri){
+			if(uri.file){
+				var outputpath = path.join(conf.archivedir, projectname, medimglib.getDicomOuputDir(doc));
+				medimglib.mkdirp(outputpath);
+				var outputfilename = path.join(outputpath, path.basename(uri.file));
+				if(!fs.existsSync(outputfilename)){
+					fs.symlinkSync(uri.file, outputfilename);	
+				}
+				return true;
 			}else{
-				return res;
+				throw "Can't create link to attachment";
 			}
 		})
-		.then(rep)
-		.catch(function(e){
-			rep(Boom.badRequest(e));
+	}
+
+	const addDicomStudy = function(dcmdoc, project){
+		if(dcmdoc["0020000D"] && dcmdoc["0020000D"].Value && dcmdoc["0020000D"].Value[0]){
+			var studyid = dcmdoc["0020000D"].Value[0];
+
+			if(project.studies.indexOf(studyid) == -1){
+				project.studies.push(studyid);
+				return server.methods.couchprovider.uploadDocuments(project);
+			}
+		}
+		return Promise.resolve();
+	}
+
+	handler.dicomImport = function(req, rep){
+		return dicomImport(req.params.filename, req.payload)
+		.then(function(res){
+			if(req.params.projectname){
+				return Promise.all([server.methods.couchprovider.getDocument(res.id), server.methods.medimg.getProjectByName(req.params.projectname)])
+				.spread(function(dcmdoc, project){
+					return Promise.all([createSoftLink(dcmdoc, req.params.projectname, req.params.filename), addDicomStudy(dcmdoc, project)]);	
+				})
+				.then(function(){
+					return res;
+				});
+			}
+			return res;
+		})
+		.catch(function(err){
+			return Boom.badImplementation(err);
+		});
+	}
+
+	handler.getDicomImage = function(req, rep){
+
+		var {credentials} = req.auth;
+		var {id, filename} = req.params;
+
+		return server.methods.couchprovider.getDocument(id)
+		.then(function(dicomdoc){
+			return validateImageCollaborator(dicomdoc, credentials);
+		})
+		.then(function(dicomdoc){
+			if(filename){
+				return server.methods.couchprovider.getDocumentStreamAttachment(dicomdoc, filename);
+			}
+			return dicomdoc;
+		})
+		.catch(function(err){
+			console.error(err);
+			return Boom.unauthorized(err);
+		});
+	}
+
+	const getDicomStudy = function(id){
+
+		var view = "_design/med-img/_view/study"
+		var query = {
+			key: JSON.stringify(id)
+		}
+
+		return server.methods.couchprovider.getViewQs(view, query)
+		.then(function(res){
+			return _.uniq(_.pluck(res, 'value'), false, function(serie){
+				return serie.seriesid;
+			});
 		});
 		
 	}
 
-	handler.dicomImport = function(req, rep){
+	handler.getDicomStudy = function(req, rep){
+		const {credentials} = req.auth;
+		const {id} = req.params;
 
-		if(req.params.id && req.params.date && req.params.seriesnumber){
+		return getDicomStudy(id)
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		})
 
-		}else{
-			server.methods.couchprovider.getDocument(req.params.id)
-			.then(function(doc){
-				return server.methods.couchprovider.isJobDocument(doc);
-			})
-			.then(function(doc){
-				return server.methods.couchprovider.validateJobOwnership(doc, req.auth.credentials);
-			})
-			.then(function(doc){
-				return server.methods.couchprovider.addDocumentAttachment(doc, req.params.name, req.payload);
-			})
-			.then(rep)
-			.catch(function(e){
-				rep(Boom.wrap(e));
-			});
-		}
 	}
 
-	handler.imageImport = function(req, rep){
+	handler.getDicomSerie = function(req, rep){
+		const {credentials} = req.auth;
+		const {id} = req.params;
 
+		var view = "_design/med-img/_view/series"
+		var query = {
+			key: JSON.stringify(id)
+		}
+
+		return server.methods.couchprovider.getViewQs(view, query)
+		.then(function(res){
+			return _.uniq(_.pluck(res, 'value'), false, function(serie){
+				return serie.seriesid;
+			});
+		})
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		})
+
+	}
+
+	const getDicomInstances = function(seriesid){
+		var view = "_design/med-img/_view/instances"
+		var query = {
+			key: JSON.stringify(seriesid)
+		}
+
+		return server.methods.couchprovider.getViewQs(view, query)
+		.then(function(res){
+			return _.uniq(_.pluck(res, 'value'), false, function(instance){
+				return instance.instanceid;
+			});
+		});
+	}
+
+	handler.getDicomInstances = function(req, rep){
+		const {credentials} = req.auth;
+		const {seriesid} = req.params;
+
+		return getDicomInstances(seriesid)
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		})
+
+	}
+
+	const deleteAttachment = function(id, filename, credentials){
+		return server.methods.couchprovider.getDocument(id)
+		.then(function(dicomdoc){
+			return validateImageOwnership(dicomdoc, credentials);
+		})
+		.then(function(dicomdoc){
+			return server.methods.couchprovider.deleteAttachment(dicomdoc, filename);	
+		});
+	}
+
+	const deleteImage = function(id, credentials){
+
+		return server.methods.couchprovider.getDocument(id)
+		.then(function(dicomdoc){
+			return validateImageOwnership(dicomdoc, credentials);
+		})
+		.then(function(dicomdoc){
+			return server.methods.couchprovider.deleteDocument(dicomdoc);
+		});
 	}
 
 	handler.deleteImage = function(req, rep){
+		const {credentials} = req.auth;
+		const {id, filename} = req.params;
 
+		var deleteprom;
+		if(id && filename){
+			deleteprom = deleteAttachment(id, filename, credentials);
+		}else{
+			deleteprom = deleteImage(id, credentials);
+		}
+
+		return deleteprom
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		});
+	}
+
+	const deleteSerie = function(seriesid, credentials){
+		return getDicomInstances(seriesid)
+		.then(function(instances){
+			return Promise.map(instances, function(instance){
+				return deleteImage(instance.instanceid, credentials);
+			}, {concurrency: 2});
+		});
+	}
+
+	handler.deleteSerie = function(req, rep){
+		const {credentials} = req.auth;
+		const {id} = req.params;
+
+		return deleteSerie(id, credentials)
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		});
+	}
+
+	handler.deleteStudy = function(req, rep){
+		const {credentials} = req.auth;
+		const {id} = req.params;
+
+		return getDicomStudy(id)
+		.then(function(series){
+			return Promise.map(series, function(serie){
+				return deleteSerie(serie.seriesid, credentials);
+			}, {concurrency: 2})
+		})
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		})
 	}
 
 	// /*

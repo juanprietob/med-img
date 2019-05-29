@@ -1,8 +1,9 @@
 	
 module.exports = function (server, conf) {
 	
-	var handlers = require('./dataprovider.handlers')(server, conf);
-	
+	const handlers = require('./dicom-couch-projects.handlers')(server, conf);
+	const projectsjoi = require('hapi-dicom-model');
+	const Joi = require('@hapi/joi')
 
 	server.route({
 		method: 'GET',
@@ -15,11 +16,11 @@ module.exports = function (server, conf) {
 			handler: handlers.getProjects,
 			validate: {
 			  	query: false,
-			    params: false, 
+			    params: null, 
 			    payload: false
 			},
 			response: {
-				schema: Joi.array().items(project)
+				schema: Joi.array().items(projectsjoi.project)
 			},
 			description: 'Get the projects posted to the database'
 	    }
@@ -27,22 +28,23 @@ module.exports = function (server, conf) {
 
 	server.route({
 		method: 'GET',
-		path: "/med-img/project/{name}",
+		path: "/med-img/project",
 		config: {
 			auth: {
                 strategy: 'token',
                 scope: ['med-img']
             },
-			handler: handlers.getProjects,
+			handler: handlers.getProject,
 			validate: {
-			  	query: false,
-			    params: {
-			    	name: Joi.string()
-			    }, 
+			  	query: Joi.object().keys({
+			  		name: Joi.string().optional(),
+			  		id: Joi.string().optional()
+			  	}), 
+			  	params: null,
 			    payload: false
 			},
 			response: {
-				schema: project
+				schema: projectsjoi.project
 			},
 			description: 'Get the project document posted to the database'
 	    }
@@ -59,8 +61,8 @@ module.exports = function (server, conf) {
 			handler: handlers.updateDocument,
 			validate: {
 				query: false,
-		        payload: project,
-		        params: false
+		        payload: projectsjoi.project,
+		        params: null
 			},
 			payload:{
 				output: 'data'
@@ -81,8 +83,8 @@ module.exports = function (server, conf) {
 			handler: handlers.createProject,
 			validate: {
 				query: false,
-		        payload: projectpost,
-		        params: false
+		        payload: projectsjoi.projectpost,
+		        params: null
 			},
 			payload:{
 				output: 'data'
@@ -99,18 +101,18 @@ module.exports = function (server, conf) {
                 strategy: 'token',
                 scope: ['admin']
             },
-			handler: handlers.deleteDocument,
+			handler: handlers.deleteProject,
 			validate: {
 			  	query: false,
 			    params: {
-			    	id: Joi.string().alphanum().required()
+			    	id: Joi.string().required()
 			    }, 
 			    payload: false
 			},
 			payload:{
 				output: 'data'
 			},
-			description: 'This route will be used to delete job documents from the database'
+			description: 'This route will be used to delete a project'
 		}
 	});
 

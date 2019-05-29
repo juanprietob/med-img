@@ -1,11 +1,12 @@
 
 module.exports = function (server, conf) {
 	
-	var handlers = require('./dicom-couch.handlers')(server, conf);
-	var Joi = require('@hapi/joi');
+	const handlers = require('./dicom-couch.handlers')(server, conf);
+	const dicommodel = require('hapi-dicom-model');
+	const Joi = require('@hapi/joi')
 
 	server.route({
-		path: '/med-img/dicom/{projectid}',
+		path: '/med-img/dicom/{filename}',
 		method: 'POST',
 		config: {
 			auth: {
@@ -16,7 +17,9 @@ module.exports = function (server, conf) {
 			validate: {
 				query: false,
 		        payload: true,
-		        params: null
+		        params: {
+		        	filename: Joi.string().required()
+		        }
 			},
 		    payload: {
 	        	maxBytes: 1024 * 1024 * 1024,
@@ -27,8 +30,8 @@ module.exports = function (server, conf) {
 	});
 
 	server.route({
-		path: '/med-img/dicom/{projectid}/{patientid}/{date}/{seriesnumber}',
-		method: 'PUT',
+		path: '/med-img/dicom/{projectname}/{filename}',
+		method: 'POST',
 		config: {
 			auth: {
                 strategy: 'token',
@@ -38,64 +41,222 @@ module.exports = function (server, conf) {
 			validate: {
 				query: false,
 		        payload: true,
-		        params: null
+		        params: {
+		        	projectname: Joi.string().required(),
+		        	filename: Joi.string().required()
+		        }
 			},
-			payload:{
-				output: 'data'
-			},
+		    payload: {
+	        	maxBytes: 1024 * 1024 * 1024,
+	    		output: 'stream'
+	        },
 			description: 'This route will be used to import dicom images to the database'
 		}
 	});
 
 	server.route({
-		method: 'PUT',
-		path: "/med-img/{patientid}/{date}/{seriesnumber}",
+		path: '/med-img/dicom/{id}',
+		method: 'GET',
 		config: {
 			auth: {
                 strategy: 'token',
-                scope: ['clusterpost', 'executionserver']
+                scope: ['med-img']
             },
-			handler: handlers.imageImport,
-	      	validate: {
-		      	query: false,
+			handler: handlers.getDicomImage,
+			validate: {
+				query: false,
+		        payload: false,
 		        params: {
-		        	patientid: Joi.string().required(),
-		        	date: Joi.string().required(),
-		        	seriesnumber: Joi.string().required()
-		        },
-		        payload: true
-		    },
-		    payload: {
-	        	maxBytes: 1024 * 1024 * 1024,
-	    		output: 'stream'
-	        },
-	        response: {
-	        	schema: Joi.object()
-	        },
-		    description: 'Add image data'
-	    }
+		        	id: Joi.string().required()
+		        }
+			},
+			response: {
+				schema: Joi.object()
+			},
+			description: 'This route will be used to get the dicom JSON image from the db'
+		}
 	});
 
 	server.route({
-		path: '/med-img/{id}',
+		path: '/med-img/dicom/{id}/{filename}',
+		method: 'GET',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.getDicomImage,
+			validate: {
+				query: false,
+		        payload: false,
+		        params: {
+		        	id: Joi.string().required(),
+		        	filename: Joi.string().required()
+		        }
+			},
+			description: 'This route will be used to get the actual dicom file from the db'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/study/{id}',
+		method: 'GET',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.getDicomStudy,
+			validate: {
+			  	query: false,
+			    params: {
+			    	id: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			response: {
+				schema: Joi.array().items(dicommodel.study)
+			},
+			description: 'This route will be used to delete a whole series from the db'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/serie/{id}',
+		method: 'GET',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.getDicomSerie,
+			validate: {
+			  	query: false,
+			    params: {
+			    	id: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			response: {
+				schema: Joi.array().items(dicommodel.serie)
+			},
+			description: 'This route will be used to delete a whole series from the db'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/instances/{seriesid}',
+		method: 'GET',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.getDicomInstances,
+			validate: {
+			  	query: false,
+			    params: {
+			    	seriesid: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			response: {
+				schema: Joi.array().items(dicommodel.instance)
+			},
+			description: 'This route will be used to delete a whole series from the db'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/{id}/{filename}',
 		method: 'DELETE',
 		config: {
 			auth: {
                 strategy: 'token',
-                scope: ['clusterpost']
+                scope: ['med-img']
             },
 			handler: handlers.deleteImage,
 			validate: {
 			  	query: false,
 			    params: {
-			    	id: Joi.string().alphanum().required()
+			    	id: Joi.string().alphanum().required(),
+			    	filename: Joi.string().alphanum().required()
 			    }, 
 			    payload: false
 			},
 			payload:{
 				output: 'data'
 			},
-			description: 'This route will be used to delete job documents from the database'
+			description: 'This route will be used to delete single image attachments from the database.'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/{id}',
+		method: 'DELETE',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.deleteImage,
+			validate: {
+			  	query: false,
+			    params: {
+			    	id: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			payload:{
+				output: 'data'
+			},
+			description: 'This route will be used to delete the JSON document from the database. Deletes all attachments as well.'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/serie/{id}',
+		method: 'DELETE',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.deleteSerie,
+			validate: {
+			  	query: false,
+			    params: {
+			    	id: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			payload:{
+				output: 'data'
+			},
+			description: 'This route will be used to delete a whole series from the db'
+		}
+	});
+
+	server.route({
+		path: '/med-img/dicom/study/{id}',
+		method: 'DELETE',
+		config: {
+			auth: {
+                strategy: 'token',
+                scope: ['med-img']
+            },
+			handler: handlers.deleteStudy,
+			validate: {
+			  	query: false,
+			    params: {
+			    	id: Joi.string().required()
+			    }, 
+			    payload: false
+			},
+			payload:{
+				output: 'data'
+			},
+			description: 'This route will be used to delete a whole study in the db'
 		}
 	});
 

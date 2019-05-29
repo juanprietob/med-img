@@ -1,108 +1,137 @@
 
-var _ = require('underscore');
-var Promise = require('bluebird');
-var Boom = require('boom');
-var path = require('path');
+const _ = require('underscore');
+const Promise = require('bluebird');
+const Boom = require('boom');
+const path = require('path');
+const qs = require('querystring');
+const projectsjoi = require('hapi-dicom-model');
+const Joi = require('@hapi/joi')
 
 module.exports = function (server, conf) {
 
+	var handler = {};
 	const validateOwnershipPromise = function(doc, credentials){
-		return new Promise(function(resolve, reject){
-			if(doc.email === credentials.email || credentials.scope.indexOf('admin') >= 0 || doc.collaborators.indexOf(credentials.email) != -1){
-				resolve(doc);
-			}else{
-				reject(Boom.unauthorized("You are not allowed to access this job document!"));
-			}
-		});
-	}
-
-	/*
-	*/
-	handler.createDocument = function(req, rep){
-		
-		var doc = req.payload;
-		var credentials = req.auth.credentials;
-
-		if(!doc.owner){
-			doc.owner = credentials.email;
+		if(doc.owner === credentials.email || credentials.scope.indexOf('admin') >= 0 || doc.collaborators.indexOf(credentials.email) != -1){
+			return Promise.resolve(doc);
+		}else{
+			return Promise.reject(Boom.unauthorized("You are not allowed to access this job document!"));
 		}
-
-		server.methods.medimg.uploadDocuments(doc)
-		.then(function(res){
-			if(res.length === 1){
-				return res[0];
-			}else{
-				return res;
-			}
-		})
-		.then(rep)
-		.catch(function(e){
-			rep(Boom.badRequest(e));
-		});
-		
 	}
 
-	const getProjects = function(params){
-		return new Promise(function(resolve, reject){
-			var key = {
-				include_docs: true
-			}
+	const getProjects = function(query){
+		var view = '_design/med-img-projects/_view/name';
+		return server.methods.couchprovider.getViewQs(view, query);
+	}
 
-			var view = '';
-			if(params.email && params.name){
-				key.key = JSON.stringify([params.email, params.name]);
-				view = '_design/projects/_view/getByEmailName?' + JSON.stringify(key);
-			}else if(params.email){
-				key.key = params.email;
-				view = '_design/projects/_view/getByEmail?' + JSON.stringify(key);
-			}else if(params.name){
-				key.key = params.name;
-				view = '_design/projects/_view/getByName?' + JSON.stringify(key);
-			}else{
-				view = '_design/projects/_view/get?' + JSON.stringify(key);
-			}
+	handler.getProjects = function(req, rep){
+		var {credentials} = req.auth;
 
-			return server.methods.medimg.getView(view);
-			.then(function(projects){
-				return _.uniq(_.pluck(projects, 'docs'));
-			});
+		return getProjects({include_docs: true})
+		.then(function(projects){
+			return _.uniq(_.pluck(projects, "doc"));
 		})
+		.then(function(projects){
+			return Promise.map(projects, function(proj){
+				return validateOwnershipPromise(proj, credentials)
+				.catch(function(e){
+					return null;
+				});
+			})
+		})
+		.then(function(projects){
+			return _.compact(projects);
+		})
+		.catch(function(err){
+			console.error(err);
+			return Boom.badRequest(err);
+		});
+	}
+
+	const getProjectById = function(id){
+		return server.methods.couchprovider.getDocument(id)
+		.then(function(project){
+			Joi.assert(project, projectsjoi.project);
+			return project;
+		});
 	}
 
 	server.method({
-	    name: 'medimg.getProjects',
-	    method: getProjects,
+	    name: 'medimg.getProjectById',
+	    method: getProjectById,
 	    options: {}
 	});
 
-	handler.getProjects = function(req, rep){
-
-		var params = req.params? req.params: {};
-		params.email = credentials.email;
-
-		if(credentials.scope.indexOf('admin') != -1){
-			params = {};
+	const getProjectByName = function(name){
+		var query = {
+			key: JSON.stringify(name),
+			include_docs: true
 		}
 
-		server.methods.medimg.getProjects(params)
+		return getProjects(query)
 		.then(function(projects){
-			return Promise.map(projects, validateOwnershipPromise);
+			projects = _.pluck(projects, 'doc');
+			if(projects.length > 0){
+				return projects[0];	
+			}
+			throw Boom.notFound(name);
+		});
+	}
+
+	server.method({
+	    name: 'medimg.getProjectByName',
+	    method: getProjectByName,
+	    options: {}
+	});
+
+	handler.getProject = function(req, rep){
+		var credentials = req.auth.credentials;
+		var {name, id} = req.query;
+		var projectprom;
+
+		if(name){
+			projectprom = getProjectByName(name);
+		}else{
+			projectprom = getProjectById(id);
+		}
+
+		return projectprom
+		.then(function(project){
+			return validateOwnershipPromise(project, credentials);
 		})
-		.then(rep)
-		.catch(rep);
+		.catch(function(err){
+			return Boom.badRequest(err);
+		});
 	}
 
 	handler.createProject = function(req, rep){
 		var doc = req.payload;
 		var credentials = req.auth.credentials;
 
-		server.methods.medimg.getProjects(credentials.email)
-		.then(function(projects){
-			if(projects.length > 0){
-				rep()
-			}else{
-				handler.createDocument(req, rep);
-			}
+		return server.methods.medimg.getProjectByName(doc.name)
+		.then(function(res){
+			return Boom.conflict("Project with same name exists!");
+		})
+		.catch(function(err){
+			return server.methods.couchprovider.uploadDocuments([doc])
+			.then(function(res){
+				return res[0];
+			})
+		});
+	}
+
+	handler.deleteProject = function(req, rep){
+
+		return server.methods.couchprovider.getDocument(req.params.id)
+		.then(function(project){
+			Joi.assert(project, projectsjoi.project);
+			var projectpath = path.join(conf.archivedir, project.name);
+			server.methods.couchprovider.removeDirectorySync(projectpath);
+
+			return server.methods.couchprovider.deleteDocument(project);
+			
+		})
+		.catch(function(e){
+			return Boom.badRequest(e);
 		});
 	}
 
@@ -112,7 +141,7 @@ module.exports = function (server, conf) {
 		
 		server.methods.medimg.getDocument(req.params.id)
 		.then(function(doc){
-			return server.methods.medimg.validateOwnershipPromise(doc, req.auth.credentials);
+			return validateOwnershipPromise(doc, req.auth.credentials);
 		})
 		.then(rep)
 		.catch(function(e){
@@ -158,7 +187,7 @@ module.exports = function (server, conf) {
 
 		server.methods.medimg.getDocument(docid)
 		.then(function(doc){
-			return server.methods.medimg.validateOwnershipPromise(doc, req.auth.credentials);
+			return validateOwnershipPromise(doc, req.auth.credentials);
 		})
 		.then(function(doc){
 			if(doc._attachments && doc._attachments[name]){
@@ -172,14 +201,5 @@ module.exports = function (server, conf) {
 		});
 	}
 
-	handler.deleteDocument = function(req, rep){
-
-		server.methods.medimg.getDocument(req.params.id)
-		.then(function(doc){
-			return server.methods.medimg.deleteDocument(doc);
-		})
-		.then(rep)
-		.catch(function(e){
-			rep(Boom.wrap(e));
-		});
-	}
+	return handler;
+}
