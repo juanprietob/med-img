@@ -4,7 +4,7 @@
   "description": "Interact with med-img server API in the command line. Create projects and import medical images.",
   "main": "index.js",
   "scripts": {
-    "test": "lab -v test.js"
+    "test": "lab -v -m 600000 test.js"
   },
   "keywords": [
     "medical",
@@ -14,5 +14,19 @@
     "med-img"
   ],
   "author": "juanprietob@gmail.com",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@hapi/joi": "^15.0.3",
+    "bluebird": "^3.5.5",
+    "dicom": "^0.4.4",
+    "hapi-dicom-model": "file:../hapi-dicom-model",
+    "hapi-jwt-couch-lib": "file:../../../clusterpost/src/hapi-jwt-couch-lib",
+    "prompt": "^1.0.0",
+    "request": "^2.88.0",
+    "underscore": "^1.9.1"
+  },
+  "devDependencies": {
+    "@hapi/lab": "^19.0.1",
+    "cksum": "^1.3.0"
+  }
 }

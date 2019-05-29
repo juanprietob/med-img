@@ -1,61 +1,93 @@
 'use strict'
-var request = require('request');
-var fs = require('fs');
-var Promise = require('bluebird');
-var path = require('path');
-var _ = require('underscore');
-var Joi = require('joi');
-var qs = require('querystring');
-var prompt = require('prompt');
-var os = require('os');
-var jws = require('jsonwebtoken');
-var HapiJWTCouch = require('hapi-jwt-couch-lib');
+const request = require('request');
+const fs = require('fs');
+const Promise = require('bluebird');
+const path = require('path');
+const _ = require('underscore');
+const Joi = require('@hapi/joi');
+const qs = require('querystring');
+const prompt = require('prompt');
+const os = require('os');
+const jws = require('jsonwebtoken');
+const dicom = require("dicom");
+const medimgmodel = require("hapi-dicom-model");
+const HapiJWTCouch = require('hapi-jwt-couch-lib');
 
-var medimgmodel = require("hapi-dicom-model");
+
+
 
 class MedImgLib extends HapiJWTCouch{
     constructor(){
         super()
         this.configfilename = path.join(os.homedir(), '.medimg-config.json');
-        this.joiconf = Joi.object().keys({
-            uri: Joi.string().uri(),
-            token: Joi.string()
-        });
     }
-
-    setConfigFileName(configfilename){
-        this.configfilename = configfilename;
-    }
-
-    getConfigFileName(){
-        return this.configfilename;
-    }
-
-    getConfigFile() {
-        try {
-            // Try to load the user's personal configuration file in the current directory
-            var conf = require(this.configfilename);
-            Joi.assert(conf, this.joiconf);
-            return conf;
-        } catch (e) {
-            return null;
-        }
-    };
-
-    setConfigFile (config) {
-        try {
-            // Try to save the user's personal configuration file in the current working directory
-            var confname = this.configfilename;
-            console.log("Writing configuration file", confname);
-            fs.writeFileSync(confname, JSON.stringify(config));
-        } catch (e) {
-            console.error(e);
-        }
-    };
 
     createProject(project){
         Joi.assert(project, medimgmodel.projectpost);
-        return this.createDocument(project, "/med-img/projects");
+        const self = this;
+        return new Promise(function(resolve, reject){
+            var options = {
+                url : self.getServer() + "/med-img/project",
+                method: "POST",
+                agentOptions: self.agentOptions,
+                auth: self.auth,
+                json: project
+            }
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(body);
+                }
+            });
+        });
+    }
+
+    deleteProject(id){
+        const self = this;
+        return new Promise(function(resolve, reject){
+            var options = {
+                url : self.getServer() + "/med-img/project/" + encodeURIComponent(id),
+                method: "DELETE",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(body);
+                }
+            });
+        });
+    }
+
+    getProject(query){
+        const self = this;
+        return new Promise(function(resolve, reject){
+            var options = {
+                url : self.getServer() + "/med-img/project",
+                method: "GET",
+                agentOptions: self.agentOptions,
+                auth: self.auth,
+                qs: query
+            }
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    getProjectByName(name){
+        return this.getProject({name});
+    }
+
+    getProjectById(id){
+        return this.getProject({id});
     }
 
     getProjects(){
@@ -78,11 +110,51 @@ class MedImgLib extends HapiJWTCouch{
         });
     }
 
-    getProjectByName(name){
+    getStudy(id){
         var self = this;
         return new Promise(function(resolve, reject){
             var options = {
-                url : self.getServer() + "/med-img/project/" + name,
+                url : self.getServer() + "/med-img/dicom/study/" + encodeURIComponent(id),
+                method: "GET",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        })
+    }
+
+    getSerie(id){
+        var self = this;
+        return new Promise(function(resolve, reject){
+            var options = {
+                url : self.getServer() + "/med-img/dicom/serie/" + encodeURIComponent(id),
+                method: "GET",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        })
+    }
+
+    getInstances(seriesid){
+        var self = this;
+        return new Promise(function(resolve, reject){
+            var options = {
+                url : self.getServer() + "/med-img/dicom/instances/" + encodeURIComponent(seriesid),
                 method: "GET",
                 agentOptions: self.agentOptions,
                 auth: self.auth
@@ -98,36 +170,12 @@ class MedImgLib extends HapiJWTCouch{
         });
     }
 
-    createDocument(doc, route){
+    getDicom(id){
         var self = this;
         return new Promise(function(resolve, reject){
-            var options = {
-                url : self.getServer() + route,
-                method: "POST",
-                json: doc,
-                agentOptions: self.agentOptions,
-                auth: self.auth
-            }
 
-            request(options, function(err, res, body){
-                if(err){
-                    reject(err);
-                }else if(res.statusCode !== 200){
-                    console.error(err);
-                    reject(body);
-                }else{
-                    resolve(body);
-                }
-            });
-        });
-    }
-
-    getDocument(id){
-        Joi.assert(id, Joi.string().alphanum());
-        var self = this;
-        return new Promise(function(resolve, reject){
             var options = {
-                url : self.getServer() + "/dataprovider/" + id,
+                url : self.getServer() + "/med-img/dicom/" + encodeURIComponent(id),
                 method: "GET",
                 agentOptions: self.agentOptions,
                 auth: self.auth
@@ -143,35 +191,260 @@ class MedImgLib extends HapiJWTCouch{
         });
     }
 
-    updateDocument(doc){
-        Joi.assert(doc, medimgmodel.job);
+    getDicomStream(id, filename){
         var self = this;
+
+        var options = {
+            url : self.getServer() + "/med-img/dicom/" + id + "/" + encodeURIComponent(filename),
+            method: "GET",
+            agentOptions: self.agentOptions,
+            auth: self.auth
+        }
+
+        return Promise.resolve(request(options));
+    }
+
+    deleteStudy(id){
+        var self = this;
+        return new Promise(function(resolve, reject){
+
+            var options = {
+                url : self.getServer() + "/med-img/dicom/study/" + encodeURIComponent(id),
+                method: "DELETE",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    deleteSerie(id){
+        var self = this;
+        return new Promise(function(resolve, reject){
+
+            var options = {
+                url : self.getServer() + "/med-img/dicom/serie/" + encodeURIComponent(id),
+                method: "DELETE",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    deleteDicom(id){
+        var self = this;
+        return new Promise(function(resolve, reject){
+
+            var options = {
+                url : self.getServer() + "/med-img/dicom/" + encodeURIComponent(id),
+                method: "DELETE",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    deleteDicomAttachment(id, filename){
+        var self = this;
+        return new Promise(function(resolve, reject){
+
+            var options = {
+                url : self.getServer() + "/med-img/dicom/" + encodeURIComponent(id) + "/" + encodeURIComponent(filename),
+                method: "DELETE",
+                agentOptions: self.agentOptions,
+                auth: self.auth
+            }
+
+            request(options, function(err, res, body){
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(JSON.parse(body));
+                }
+            });
+        });
+    }
+
+    readdirSync(dir){
+        var files = [];
+        var that = this;
+        fs.readdirSync(dir).forEach(function(file){
+            try{
+                var current = path.join(dir, file);
+                var stat = fs.statSync(current);
+                if (stat && stat.isDirectory()) {
+                    files = files.concat(that.readdirSync(current));
+                }else {
+                    files.push(current);
+                }
+            }catch(e){
+                console.error(e);
+            }
+        });
+        return files;
+    }
+
+    mkdirp(outputdir){
+        var pathparse = path.parse(outputdir);
+        var allpatharray = outputdir.split(path.sep);
+        var currentpath = pathparse.root;
+        _.each(allpatharray, function(p){
+            currentpath = path.join(currentpath, p);
+            try{
+                fs.statSync(currentpath);
+            }catch(e){
+                try{
+                    fs.mkdirSync(currentpath);
+                }catch(e){
+                    console.error(e);
+                    throw e;
+                }
+            }
+        });
+    }
+
+    dumpDicomFile(dcmfile){
+        try{
+            return this.dumpDicomStream(fs.createReadStream(dcmfile));    
+        }catch(e){
+            return Promise.reject(e);
+        }
+        
+    }
+
+    dumpDicomStream(dcmstream){
         return new Promise(function(resolve, reject){
             try{
-                var options = { 
-                    uri: self.getServer() + "/dataprovider",
-                    method: 'PUT', 
-                    json : doc, 
-                    agentOptions: self.agentOptions,
-                    auth: self.auth
-                };
-                
-                request(options, function(err, res, body){
-                    if(err) resolve(err);
-                    resolve(body);
+                var decoder = dicom.decoder({
+                    guess_header: true,
+                    read_header: true
                 });
+                decoder.on('error', reject);
+     
+                var encoder = new dicom.json.JsonEncoder();
+                encoder.on('error', reject)
+
+                var sink = new dicom.json.JsonSink(function(err, json) {
+                    if (err) {
+                        reject(err);
+                    }else{
+                        resolve(json);
+                    }
+                });
+
+                dcmstream.pipe(decoder).pipe(encoder).pipe(sink);
             }catch(e){
                 reject(e);
             }
-            
         });
     }
 
-    updateDocuments(docs){
+    getDicomFile(dcmfile){
+        return this.dumpDicomFile(dcmfile)
+        .then(function(dcmjson){
+            return dcmfile;
+        })
+        .catch(function(err){
+            console.error(dcmfile, err);
+            return null;
+        });
+    }
+
+    getDicomFiles(dir){
+        var files = this.readdirSync(dir);
         var self = this;
-        return Promise.map(docs, function(doc){
-            return self.updateDocument(doc);
-        }, {concurrency: 1});
+        return Promise.map(files, function(dcmfile){
+            return self.getDicomFile(dcmfile);
+        })
+        .then(function(res){
+            return _.compact(res);
+        });
+    }
+
+    getDate(){
+        var d = new Date();
+        return [d.getFullYear(), d.getDate(), d.getMonth()].join("-");
+    }
+
+    getDicomOuputDir(dcmjson){
+        var seriesid = dicom.json.get_value(dcmjson, dicom.tags.SeriesNumber);
+        seriesid = seriesid? seriesid: "0";
+        var seriesDescription = dicom.json.get_value(dcmjson, dicom.tags.SeriesDescription);
+        seriesDescription = seriesDescription? (seriesid + "_" + seriesDescription): seriesid;
+        var patientid = dicom.json.get_value(dcmjson, dicom.tags.PatientID);
+        patientid = patientid? patientid: "no_patient_id";
+        var studydate = dicom.json.get_value(dcmjson, dicom.tags.StudyDate);
+        studydate = studydate? studydate: that.getDate();
+
+        return path.join(String(patientid), String(studydate), String(seriesDescription));
+    }
+
+    getDicomValue(dcmjson, tag){
+        return dicom.json.get_value(dcmjson, dicom.tags[tag]);
+    }
+
+    getDicomOutputPaths(dcmfiles){
+        var that = this;
+        return _.map(dcmfiles, function(dcmfile){
+            dcmfile.outputdir = that.getDicomOuputDir(dcmfile.json);
+            return dcmfile;
+        });
+    }
+
+    copy(instream, outstream){
+        return new Promise(function(resolve, reject){
+            instream.pipe(outstream);
+            instream.on('error', reject);
+            outstream.on('error', reject);
+            outstream.on('end', resolve);
+        });
+    }
+
+    splitDicomDir(dir, outputdir){
+        const self = this;
+        var files = this.readdirSync(dir);
+        
+        return Promise.map(files, function(dcmfile){
+            return self.dumpDicomFile(dcmfile)
+            .then(function(dcmjson){
+                return self.getDicomOuputDir(dcmjson)
+                .then(function(dcmoutputdir){
+                    var outputpath = path.join(outputdir, dcmoutputdir, path.basename(dcmfile));
+                    if(!fs.existsSync(dcmoutputdir)){
+                        self.mkdirp(dcmoutputdir);
+                    }
+                    var instream = fs.createReadStream(dcmfile);
+                    var outstream = fs.createWriteStream(outputpath);
+                    return self.copy(instream, outstream);
+                });
+            })
+            .catch(function(err){
+                console.error(err);
+            });
+        });
     }
 
     /*
@@ -180,22 +453,41 @@ class MedImgLib extends HapiJWTCouch{
     *   filename is required
     *   name is optional. 
     */
-    uploadFile(jobid, filename, name){
-        Joi.assert(jobid, Joi.string().alphanum())
-        Joi.assert(filename, Joi.string())
-        var self = this;
+    uploadDicomDir(directory, projectid){
+        const self = this;
+        var files = this.readdirSync(directory);
+        
+        return Promise.map(files, function(dcmfile){
+            return self.dumpDicomFile(dcmfile)
+            .then(function(dcmjson){
+                return self.uploadDicomFile(dcmfile, projectid);
+            })
+            .catch(function(err){
+                console.error(err);
+            });
+        }, {concurrency: 2});
+    }
+
+    uploadDicomFile(dcmfile, projectid){
+
+        const self = this;
+
         return new Promise(function(resolve, reject){
 
-            if(name === undefined){
-                name = path.basename(filename);
-            }else{
-                name = encodeURIComponent(name);
-            }
+            var name = path.basename(dcmfile);
+
+            var url = self.getServer() + "/med-img/dicom/";
+
+            if(projectid){
+                url += projectid + "/";
+            }  
+
+            url += path.basename(name);
 
             try{
                 var options = {
-                    url : self.getServer() + "/dataprovider/" + jobid + "/" + name,
-                    method: "PUT",
+                    url : url,
+                    method: "POST",
                     agentOptions: self.agentOptions,
                     headers: { 
                         "Content-Type": "application/octet-stream"
@@ -203,30 +495,23 @@ class MedImgLib extends HapiJWTCouch{
                     auth: self.auth
                 }
 
-                var fstat = fs.statSync(filename);
-                if(fstat){
-
-                    var stream = fs.createReadStream(filename);
-
-                    stream.pipe(request(options, function(err, res, body){
-                            if(err){
-                                reject(err);
-                            }else{
-                                resolve(JSON.parse(body));
-                            }
-                        })
-                    );
-                }else{
-                    reject({
-                        "error": "File not found: " + filename
+                fs.createReadStream(dcmfile)
+                .pipe(request(options, function(err, res, body){
+                        if(err){
+                            reject(err);
+                        }else{
+                            resolve(JSON.parse(body));
+                        }
                     })
-                }
+                );
+                
             }catch(e){
                 reject(e);
             }
 
         });
     }
+
 
     uploadFiles(jobid, filenames, names){
         var self = this;
@@ -241,9 +526,11 @@ class MedImgLib extends HapiJWTCouch{
         });
     }
 
+
+
     start(){
         var self = this;
-        var config = self.getConfigFile();
+        var config = self.getConfig();
 
         if(config){
             self.setServer(config.uri);
@@ -257,7 +544,10 @@ class MedImgLib extends HapiJWTCouch{
                 });
             }
         }else{
-            return super.start();
+            return super.start()
+            .then(function(config){
+                self.saveConfig(config);
+            });
         }
     }
 
