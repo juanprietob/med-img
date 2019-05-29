@@ -1,4 +1,4 @@
-var Joi = require('joi');
+var Joi = require('@hapi/joi');
 
 // exports.parameter = Joi.object().keys({
 // 	flag: Joi.string().allow(''),
@@ -38,26 +38,40 @@ var Joi = require('joi');
 // 		data: Joi.object().optional()
 //     });
 
-exports.project = Joi.object({
-			_id: Joi.string().alphanum().required(),
-			_rev: Joi.string().required(),
-			name: Joi.string().required(),
-        	type: Joi.string().valid('project').required(),
-        	description: Joi.string(),
-        	collection: Joi.array().items(Joi.object().keys({
-        		_id: Joi.string().alphanum().required()
-        	})),
-        	owner: Joi.string().email().required(),
-        	collaborators: Joi.array().items(Joi.string().email())
-		});
-
-exports.projectpost = Joi.object({
+exports.project = Joi.object().keys({
+		_id: Joi.string().alphanum().required(),
+		_rev: Joi.string().required(),
 		name: Joi.string().required(),
     	type: Joi.string().valid('project').required(),
     	description: Joi.string(),
-    	collection: Joi.array().items(Joi.object().keys({
-    		_id: Joi.string().alphanum().required()
-    	})),
     	owner: Joi.string().email().required(),
-    	collaborators: Joi.array().items(Joi.string().email())
+    	collaborators: Joi.array().items(Joi.string().email()),
+        studies: Joi.array().items(Joi.string())
+	});
+
+exports.projectpost = Joi.object().keys({
+		name: Joi.string().required(),
+    	type: Joi.string().valid('project').required(),
+    	description: Joi.string(),
+    	owner: Joi.string().email().required(),
+    	collaborators: Joi.array().items(Joi.string().email()).min(0),
+        studies: Joi.array().items(Joi.string()).min(0)
     });
+
+exports.study = Joi.object().keys({
+    "seriesid": Joi.string(),
+    "patientid": Joi.any(),
+    "studydate": Joi.any(),
+    "modality": Joi.any()
+});
+
+exports.serie = Joi.object().keys({
+    "seriesid": Joi.string(),
+    "seriesnumber": Joi.any(),
+    "seriesdescription": Joi.any()
+})
+
+exports.instance = Joi.object().keys({
+    "instanceid": Joi.string(),
+    "attachments": Joi.array().items(Joi.any())
+})
