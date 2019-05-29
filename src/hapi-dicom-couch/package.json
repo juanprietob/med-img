@@ -18,7 +18,7 @@
     "@hapi/joi": "^15.0.3",
     "concat-stream": "^2.0.0",
     "couch-provider": "file:../../../clusterpost/src/couch-provider",
-    "couch-update-views": "^1.0.8",
+    "couch-update-views": "^1.0.9",
     "dicom-util": "file:../dicom-util",
     "hapi-dicom-model": "file:../hapi-dicom-model",
     "med-img-lib": "file:../med-img-lib",

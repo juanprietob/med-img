@@ -1,0 +1,15 @@
+{
+    "_id": "_design/med-img-projects",
+    "views": {
+        "name": {
+            "map": "function (doc) {\n  if(doc.type == \"project\"){\n    emit(doc.name, 1);\n  }\n}"
+        },
+        "studycollaborators": {
+            "map": "function (doc) {\n  if(doc.type == \"project\"){\n    doc.studies.forEach(function(studyid){\n      emit([studyid, doc.owner], 1);\n      doc.collaborators.forEach(function(collaborator){\n        emit([studyid, collaborator], 1);\n      })\n    });\n  }\n}"
+        },
+        "studyowner": {
+            "map": "function (doc) {\n  if(doc.type == \"project\"){\n    doc.studies.forEach(function(studyid){\n      emit([studyid, doc.owner], 1);\n    });\n  }\n  \n}"
+        }
+    },
+    "language": "javascript"
+}
