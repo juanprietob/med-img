@@ -29,8 +29,7 @@ class NavBar extends Component{
 
     var strSettings = <Settings/>;
 
-
-    if(user && user.scope && user.scope.indexOf('default') != -1){
+    if(user && user.scope && user.scope.indexOf('admin') != -1){
       return <NavDropdown title={<t><Settings/> Settings</t>} id="basic-nav-dropdown">
           <NavDropdown.Item onClick={()=>{history.push('/admin/users')}}><Users/> Users</NavDropdown.Item>
         </NavDropdown>
@@ -59,16 +58,28 @@ class NavBar extends Component{
     }
   }
 
+  getHome(){
+    const {user, history} = this.props;
+    
+    if(user && user.scope && user.scope.indexOf('default') != -1){
+      return (
+        <Link class="nav-link" to="/home"><Home/> Home</Link>
+      )
+    }
+  }
+
   render() {
     const self = this;
     const {user} = self.props;
 
     return (<Navbar bg="light" expand="lg">
-      <Navbar.Brand href="#/home">MedImg</Navbar.Brand>
+      <Navbar.Brand href="#/">MedImg</Navbar.Brand>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav">
         <Nav className="mr-auto">
-          <Nav.Link><Link class="nav-link" to="/home"><Home/> Home</Link></Nav.Link>
+          <Nav.Link>
+            {self.getHome()}
+          </Nav.Link>
           {self.getComputing()}
           <Nav.Link>
             {self.getSettings()}

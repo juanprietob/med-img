@@ -1,0 +1,44 @@
+
+@import url(https://fonts.googleapis.com/css?family=Comfortaa:200,300,400,700);
+$headings-font-family:Comfortaa;
+
+$primary:#FF550B;
+$secondary:#303030;
+$success:#015668;
+$danger:#FF304F;
+$info:#0F81C7;
+$warning:#0DE2EA;
+$light:#e8e8e8;
+$dark:#000000;
+$enable-shadows:true;
+$body-color:#cccccc;
+$link-color:#f0f0f0;
+$font-size-base:1.1rem;
+$input-disabled-bg: #ccc;
+
+/*! Import Bootstrap 4 variables */
+@import "../node_modules/bootstrap/scss/functions";
+@import "../node_modules/bootstrap/scss/variables";
+$body-bg:$black;
+$link-hover-color:darken($link-color,20%);
+$navbar-dark-hover-color:$white;
+$navbar-light-hover-color:$gray-800;
+$navbar-light-active-color:$gray-800;
+$input-bg:$gray-300;
+$card-border-color:rgba($black, 0.6);
+$card-cap-bg:lighten($gray-800, 10%);
+$card-bg:lighten($body-bg, 15%);
+$list-group-bg:lighten($body-bg,5%);
+$list-group-border-color:rgba($black,0.6);
+$list-group-hover-bg:lighten($body-bg,10%);
+$list-group-active-color:$white;
+$list-group-active-bg:$list-group-hover-bg;
+$list-group-active-border-color:$list-group-border-color;
+$list-group-disabled-color:$gray-800;
+$list-group-disabled-bg:$black;
+$list-group-action-color:$white;
+
+// Add SASS theme customizations here..
+.navbar-dark.bg-primary {background-color:#111111 !important;}
+
+@import "../node_modules/bootstrap/scss/bootstrap";
