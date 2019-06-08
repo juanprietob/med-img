@@ -430,16 +430,14 @@ class MedImgLib extends HapiJWTCouch{
         return Promise.map(files, function(dcmfile){
             return self.dumpDicomFile(dcmfile)
             .then(function(dcmjson){
-                return self.getDicomOuputDir(dcmjson)
-                .then(function(dcmoutputdir){
-                    var outputpath = path.join(outputdir, dcmoutputdir, path.basename(dcmfile));
-                    if(!fs.existsSync(dcmoutputdir)){
-                        self.mkdirp(dcmoutputdir);
-                    }
-                    var instream = fs.createReadStream(dcmfile);
-                    var outstream = fs.createWriteStream(outputpath);
-                    return self.copy(instream, outstream);
-                });
+                var dcmoutputdir =  path.join(outputdir, self.getDicomOuputDir(dcmjson));
+                var outputpath = path.join(dcmoutputdir, path.basename(dcmfile));
+                if(!fs.existsSync(dcmoutputdir)){
+                    self.mkdirp(dcmoutputdir);
+                }
+                var instream = fs.createReadStream(dcmfile);
+                var outstream = fs.createWriteStream(outputpath);
+                return self.copy(instream, outstream);
             })
             .catch(function(err){
                 console.error(err);
