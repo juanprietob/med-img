@@ -60,9 +60,11 @@ exports.projectpost = Joi.object().keys({
 
 exports.study = Joi.object().keys({
     "seriesid": Joi.string(),
+    "seriesdescription": Joi.any(),
     "patientid": Joi.any(),
     "studydate": Joi.any(),
-    "modality": Joi.any()
+    "modality": Joi.any(),
+    "seriesnumber": Joi.any()
 });
 
 exports.serie = Joi.object().keys({
