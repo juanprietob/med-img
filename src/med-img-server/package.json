@@ -20,6 +20,7 @@
     "hapi-dicom-couch": "file:../hapi-dicom-couch",
     "hapi-jwt-couch": "file:../../../clusterpost/src/hapi-jwt-couch",
     "lout": "^11.2.3",
+    "med-img-static": "file:../med-img-static",
     "node-crontab": "0.0.8",
     "nodemailer": "^4.0.1",
     "request": "^2.88.0",
