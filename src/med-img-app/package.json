@@ -1,0 +1,30 @@
+{
+  "name": "med-img-app",
+  "version": "1.0.0",
+  "description": "Application using med-img-lib for common operations to manipulate dicoms and submit to med-img-server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juanprietob/med-img.git"
+  },
+  "keywords": [
+    "DICOM",
+    "medical",
+    "image",
+    "split",
+    "med-img-server"
+  ],
+  "author": "juanprietob@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/juanprietob/med-img/issues"
+  },
+  "homepage": "https://github.com/juanprietob/med-img#readme",
+  "dependencies": {
+    "med-img-lib": "file:../med-img-lib",
+    "minimist": "^1.2.0"
+  }
+}
