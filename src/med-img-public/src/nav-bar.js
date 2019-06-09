@@ -72,7 +72,7 @@ class NavBar extends Component{
     const self = this;
     const {user} = self.props;
 
-    return (<Navbar bg="light" expand="lg">
+    return (<Navbar bg="primary" expand="lg">
       <Navbar.Brand href="#/">MedImg</Navbar.Brand>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav">

@@ -143,7 +143,7 @@ class App extends Component {
               <Card.Body>
                 <Card.Title class='alert alert-primary'>HPC</Card.Title>
                 <Card.Text>
-                  We can provide the resources for storage and high computing needs for your medical organization.
+                  We provide the resources for image storage, retrieval and high performance computing for your organization.
                 </Card.Text>
               </Card.Body>
             </Card>
@@ -151,15 +151,23 @@ class App extends Component {
               <Card.Body>
                 <Card.Title class='alert alert-primary'>Automated analysis</Card.Title>
                 <Card.Text>
-                  Quality control algorithms and automated image analysis.
+                  We provide several methods for image quality control, automated analysis and statistics. 
                 </Card.Text>
               </Card.Body>
             </Card>
             <Card>
               <Card.Body>
-                <Card.Title class='alert alert-primary'>Artificial intelligence</Card.Title>
+                <Card.Title class='alert alert-primary'>AI</Card.Title>
                 <Card.Text>
-                  Anotate images with our customized online editor and use them to train state of the art aritficial intelligenece algorithms.
+                  Anotate images/datasets, with our customized tools and use them to train state of the art artificial intelligence algorithms.
+                </Card.Text>
+              </Card.Body>
+            </Card>
+            <Card>
+              <Card.Body>
+                <Card.Title class='alert alert-primary'>Tools</Card.Title>
+                <Card.Text>
+                  Image visualization and edition, 3D object modeling and shape statistics.
                 </Card.Text>
               </Card.Body>
             </Card>
@@ -213,8 +221,17 @@ class App extends Component {
             <Route path="/viewer" component={this.viewer.bind(this)}/>
             <Route exact path="/" component={this.welcome.bind(this)}/>
           </Container>
-          <footer style={{fontSize: "small", textAlign:"right"}}>
-            Copyright &copy; 2019 - Juan Carlos Prieto
+          <footer class="alert alert-dark" style={{fontSize: "small", textAlign: "center"}}>
+            <Row>
+              <Col md={{ span: 2, offset: 5 }}>
+                <a href="mailto:contact@medimg-ai.com">Contact us</a>
+              </Col>
+            </Row>
+            <Row>
+              <Col md={{ span: 2, offset: 5 }}>
+                Copyright &copy; 2019 - Juan Carlos Prieto
+              </Col>
+            </Row>
           </footer>
         </HashRouter>
       </div>

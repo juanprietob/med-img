@@ -20,6 +20,7 @@ $input-disabled-bg: #ccc;
 @import "../node_modules/bootstrap/scss/functions";
 @import "../node_modules/bootstrap/scss/variables";
 $body-bg:$black;
+$link-color:$primary;
 $link-hover-color:darken($link-color,20%);
 $navbar-dark-hover-color:$white;
 $navbar-light-hover-color:$gray-800;
