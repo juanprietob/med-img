@@ -1,7 +1,7 @@
 
 const _ = require('underscore');
 const Promise = require('bluebird');
-const Boom = require('boom');
+const Boom = require('@hapi/boom');
 const path = require('path');
 const qs = require('querystring');
 const projectsjoi = require('hapi-dicom-model');
