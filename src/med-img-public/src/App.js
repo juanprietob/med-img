@@ -11,6 +11,8 @@ import Modal from 'react-bootstrap/Modal';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Card from 'react-bootstrap/Card';
+import Accordion from 'react-bootstrap/Accordion';
+import Button from 'react-bootstrap/Button';
 
 import axios from 'axios';
 import store from "./redux/store";
@@ -18,6 +20,8 @@ import { connect } from "react-redux";
 import Container from "react-bootstrap/Container"
 
 import {MedImgProjects, MedImgViewer, MedImgStudy, MedImgSurf} from 'react-med-img';
+
+import {Eye, EyeOff} from 'react-feather'
 
 class App extends Component {
 
@@ -106,14 +110,24 @@ class App extends Component {
   }
 
   viewer(){
-    const {user} = this.state;
     return (
       <Container fluid="true">
-        <Row style={{height: "100vh"}}>
-          <Col sm={2} style={{height: "inherit"}}>
-            <MedImgStudy/>
+        <Row>
+          <Col sm={2}>
+            <Accordion defaultActiveKey="0">
+              <Card>
+                <Card.Header>
+                  <Accordion.Toggle as={Button} variant="primary" eventKey="0">
+                    Series <Eye/>
+                  </Accordion.Toggle>
+                </Card.Header>
+                <Accordion.Collapse eventKey="0" style={{maxHeight: "78vh", overflow: "scroll"}}>
+                  <MedImgStudy/>
+                </Accordion.Collapse>
+              </Card>
+            </Accordion>
           </Col>
-          <Col sm={10} style={{height: "inherit"}}>
+          <Col sm={10} style={{maxHeight: "78vh"}}>
             <MedImgViewer/>
           </Col>
         </Row>
@@ -212,7 +226,7 @@ class App extends Component {
           <header className="App-header">
             <NavBar/>
           </header>
-          <Container style={{height: "90vh"}} fluid="true">
+          <Container fluid="true" style={{height: "100%", minHeight: "85vh"}}>
             <Route path="/login" component={this.login.bind(this)}/>
             <Route path="/logout" component={this.login.bind(this)}/>
             <Route path="/user" component={this.profile.bind(this)}/>
@@ -221,14 +235,14 @@ class App extends Component {
             <Route path="/viewer" component={this.viewer.bind(this)}/>
             <Route exact path="/" component={this.welcome.bind(this)}/>
           </Container>
-          <footer class="alert alert-dark" style={{fontSize: "small", textAlign: "center"}}>
-            <Row>
-              <Col md={{ span: 2, offset: 5 }}>
+          <footer class="alert alert-dark" style={{fontSize: "small", width: "100%"}}>
+            <Row className="justify-content-md-center">
+              <Col md="auto">
                 <a href="mailto:contact@medimg-ai.com">Contact us</a>
               </Col>
             </Row>
-            <Row>
-              <Col md={{ span: 2, offset: 5 }}>
+            <Row className="justify-content-md-center">
+              <Col md="auto">
                 Copyright &copy; 2019 - Juan Carlos Prieto
               </Col>
             </Row>
