@@ -121,14 +121,14 @@ class App extends Component {
                     Series <Eye/>
                   </Accordion.Toggle>
                 </Card.Header>
-                <Accordion.Collapse eventKey="0" style={{maxHeight: "78vh", overflow: "scroll"}}>
+                <Accordion.Collapse eventKey="0" style={{overflow: "scroll", maxHeight: "85vh"}}>
                   <MedImgStudy/>
                 </Accordion.Collapse>
               </Card>
             </Accordion>
           </Col>
-          <Col sm={10} style={{maxHeight: "78vh"}}>
-            <MedImgViewer/>
+          <Col sm={10}>
+            <MedImgViewer maxHeight="85vh" maxWidth="85vh"/>
           </Col>
         </Row>
       </Container>);
@@ -226,7 +226,7 @@ class App extends Component {
           <header className="App-header">
             <NavBar/>
           </header>
-          <Container fluid="true" style={{height: "100%", minHeight: "85vh"}}>
+          <Container fluid="true" style={{height: "100%", minHeight: "90vh"}}>
             <Route path="/login" component={this.login.bind(this)}/>
             <Route path="/logout" component={this.login.bind(this)}/>
             <Route path="/user" component={this.profile.bind(this)}/>
