@@ -75,5 +75,6 @@ exports.serie = Joi.object().keys({
 
 exports.instance = Joi.object().keys({
     "instanceid": Joi.string(),
+    "modality": Joi.string(),
     "attachments": Joi.array().items(Joi.any())
 })

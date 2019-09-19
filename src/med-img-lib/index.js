@@ -328,6 +328,7 @@ class MedImgLib extends HapiJWTCouch{
 
     dumpDicomFile(dcmfile){
         try{
+            console.log(dcmfile)
             return this.dumpDicomStream(fs.createReadStream(dcmfile));    
         }catch(e){
             return Promise.reject(e);
@@ -538,7 +539,11 @@ class MedImgLib extends HapiJWTCouch{
             }else{
                 return self.promptUsernamePassword()
                 .then(function(user){
-                    return self.userLogin(user);
+                    return self.userLogin(user)
+                    .then(function(res){
+                        config.token = res.token;
+                        self.saveConfig(config);
+                    });
                 });
             }
         }else{

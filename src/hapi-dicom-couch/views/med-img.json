@@ -11,7 +11,7 @@
             "map": "function (doc) {\n  if(doc.type == \"image\" && doc[\"00100020\"]){\n    emit(doc[\"00100020\"].Value[0], {\n      \"studydescription\": doc[\"00081030\"]? doc[\"00081030\"].Value[0]: \"\",\n      \"studydate\": doc[\"00080020\"]? doc[\"00080020\"].Value[0]: \"\",\n      \"studyid\": doc[\"0020000D\"]? doc[\"0020000D\"].Value[0]: \"\"\n    });\n  }\n}"
         },
         "instances": {
-            "map": "function (doc) {\n  if(doc.type == \"image\" && doc[\"0020000E\"]){\n    var instanceid = doc._id;\n    var attachments = doc.attachments? Object.keys(doc.attachments): [];\n    var _attachments = doc._attachments? Object.keys(doc._attachments): [];\n    emit(doc[\"0020000E\"].Value[0], {\n      \"instanceid\": instanceid, \n      \"attachments\": attachments.concat(_attachments)\n    });\n  }\n}"
+            "map": "function (doc) {\n  if(doc.type == \"image\" && doc[\"0020000E\"]){\n    var instanceid = doc._id;\n    var attachments = doc.attachments? Object.keys(doc.attachments): [];\n    var _attachments = doc._attachments? Object.keys(doc._attachments): [];\n    emit(doc[\"0020000E\"].Value[0], {\n      \"instanceid\": instanceid, \n      \"modality\": doc[\"00080060\"].Value[0],\n      \"attachments\": attachments.concat(_attachments)\n    });\n  }\n}"
         }
     },
     "language": "javascript"

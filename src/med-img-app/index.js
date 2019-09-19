@@ -84,6 +84,9 @@ if(argv._[0] == "create"){
     .catch(function(err){
         console.error(err);
     });
+}else{
+    help();
+    process.exit(1);
 }
 
 

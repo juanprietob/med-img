@@ -7,6 +7,7 @@ import {Home, User, Users, Cpu, Settings, LogOut, LogIn} from 'react-feather';
 import NavDropdown from 'react-bootstrap/NavDropdown';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
+import Image from 'react-bootstrap/Image';
 
 class NavBar extends Component{
   constructor(props) {
@@ -73,7 +74,7 @@ class NavBar extends Component{
     const {user} = self.props;
 
     return (<Navbar bg="primary" expand="lg">
-      <Navbar.Brand href="#/">MedImg</Navbar.Brand>
+      <Navbar.Brand href="#/"><Image src="images/facebook_cover_photo_1.png" style={{height: "10vh"}}/></Navbar.Brand>
       <Navbar.Toggle aria-controls="basic-navbar-nav" />
       <Navbar.Collapse id="basic-navbar-nav">
         <Nav className="mr-auto">
