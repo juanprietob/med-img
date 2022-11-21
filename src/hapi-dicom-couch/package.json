@@ -21,6 +21,6 @@
     "couch-update-views": "^1.0.9",
     "hapi-dicom-model": "file:../hapi-dicom-model",
     "med-img-lib": "file:../med-img-lib",
-    "underscore": "^1.9.1"
+    "underscore": "^1.12.1"
   }
 }
