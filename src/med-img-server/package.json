@@ -22,7 +22,7 @@
     "lout": "^11.2.3",
     "med-img-static": "file:../med-img-static",
     "node-crontab": "0.0.8",
-    "nodemailer": "^4.0.1",
+    "nodemailer": "^6.4.16",
     "request": "^2.88.0",
     "underscore": "^1.9.1"
   },
