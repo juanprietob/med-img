@@ -22,15 +22,14 @@ import {Col} from 'react-bootstrap';
 import qs from 'query-string';
 
 class MedImgSurf extends Component {
-  // static propTypes = {
-  //   text: PropTypes.string
-  // }
 
-  constructor(){
-    super()
-
+  constructor(props){
+    super(props)
+    
     this.state = {
-      instances: []
+      instances: [], 
+      background: this.props.background? this.props.background: [0, 0, 0],
+      data: this.props.data
     }
   }
 
@@ -41,8 +40,7 @@ class MedImgSurf extends Component {
 
     const self = this;
 
-    // this.jwtauth = new JWTAuthService();
-    // this.jwtauth.setHttp(this.props.http);
+    const {data} = self.state
 
     this.medimgservice = new MedImgService();
     this.medimgservice.setHttp(this.props.http);
@@ -82,20 +80,7 @@ class MedImgSurf extends Component {
     const camera = renderer.getActiveCamera();
     // camera.setPosition(...position);
 
-    Promise.all(_.map([
-    { surf: "Model_1_1.vtk", color: [1,86,104] },
-    { surf: "Model_2_2.vtk", color: [1,86,104] },
-    { surf: "Model_3_3.vtk", color: [15,129,199] },
-    { surf: "Model_4_4.vtk", color: [15,129,199] },
-    { surf: "Model_5_5.vtk", color: [255,85,11] },
-    { surf: "Model_6_6.vtk", color: [255,85,11] },
-    { surf: "Model_7_7.vtk", color: [255,48,79] },
-    { surf: "Model_8_8.vtk", color: [255,48,79] },
-    { surf: "Model_9_9.vtk", color: [199,255,0] },
-    { surf: "Model_10_10.vtk", color: [199,255,0] },
-    { surf: "Model_40_40.vtk", color: [13,226,234] },
-    { surf: "Model_41_41.vtk", color: [13,226,234] },
-    { surf: "left_cortex.vtk", color: [255, 255, 255], /*representation: 1,*/ opacity: 0.3 }], function(surf){
+    Promise.all(_.map(data, function(surf){
       return self.medimgservice.getPublicSurf(surf.surf)
       .then(function(res){
         reader.parseAsText(res.data);
@@ -119,6 +104,7 @@ class MedImgSurf extends Component {
         mapper.setInputData(polydata);
 
         renderer.addActor(actor);
+        renderer.setBackground(self.state.background)
 
         const position = camera.getFocalPoint();
         
@@ -158,16 +144,5 @@ const mapStateToProps = (state, ownProps) => {
     http: state.jwtAuthReducer.http
   }
 }
-
-// const mapDispatchToProps = (dispatch) => {
-//   return {
-//     showJobDetail: params => {
-//       dispatch({
-//         type: 'show-job-detail',
-//         job: job
-//       });
-//     }
-//   }
-// }
 
 export default withRouter(connect(mapStateToProps)(MedImgSurf));
