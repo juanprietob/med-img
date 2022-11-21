@@ -25,6 +25,6 @@
   "homepage": "https://github.com/juanprietob/med-img#readme",
   "dependencies": {
     "med-img-lib": "file:../med-img-lib",
-    "minimist": "^1.2.0"
+    "minimist": "^1.2.6"
   }
 }
