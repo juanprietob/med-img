@@ -14,8 +14,8 @@
   "author": "juanprietob@gmail.com",
   "license": "ISC",
   "dependencies": {
-    "@hapi/boom": "^7.4.2",
-    "@hapi/joi": "^15.0.3",
+    "@hapi/boom": "^7.4.11",
+    "@hapi/joi": "^15.1.1",
     "concat-stream": "^2.0.0",
     "couch-provider": "^2.3.1",
     "couch-update-views": "^1.0.9",
